@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<project basedir="." default="build" name="WS-MailBoxManager">
+
+    <!-- To be modified according to the application -->
+      <property name="wsdlurl" value="http://${mbm}:7364/MailBoxManager?wsdl"/>
+	  <!-- Class which contains the main -->
+      <property name="mainclass" value="MailBoxClient"/>
+    <!-- To be modified End -->
+    
+    <property environment="env"/>
+	<property name="wsimport-cmd" value="wsimport"/>  			
+		
+    <path id="project.classpath">
+        <pathelement location="class"/>
+    </path>
+		
+	<target name="build" depends="javac"/>
+	
+    <target name="init">
+        <mkdir dir="generated"/>
+        <mkdir dir="class"/>
+        <copy includeemptydirs="false" todir="class">
+            <fileset dir="generated">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+        <copy includeemptydirs="false" todir="class">
+            <fileset dir="src">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+    </target>
+		
+    <target name="all">
+        <antcall target="build"/>
+        <antcall target="run"/>
+    </target>
+    
+    <target name="clean">
+        <delete dir="class"/>
+        <delete dir="generated"/>
+    </target>
+		
+    <target depends="clean" name="cleanall"/>
+		
+	<target depends="wsimport" name="javac">
+        <echo message="${ant.project.name}: ${ant.file}"/>
+        <javac debug="true" destdir="class">
+            <src path="generated"/>
+            <classpath refid="project.classpath"/>
+        </javac>
+        <javac verbose="true" debug="true" destdir="class">
+            <src path="src"/>
+            <classpath refid="project.classpath"/>
+        </javac>
+    </target>
+    		
+    <target name="run">
+        <java classname="${mainclass}" failonerror="true" fork="yes">
+            <classpath refid="project.classpath"/>
+            <arg value="/etc/hosts"/>
+        </java>
+    </target>
+		
+    <target depends="javac" name="run_jar">
+        <jar destfile="WS-MailBoxManager.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="${mainclass}"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="./class"/>
+        </jar>
+    </target>
+			
+	<target depends="init" name="wsimport">
+	        <exec executable="${wsimport-cmd}">  
+	            <!-- Specify where to write other generated files. -->   
+	            <arg value="-d"/>   
+	            <arg value="class"/>   
+	            <!-- Specify where to write generated source files. -->   
+	            <arg value="-s"/>   
+	            <arg value="generated"/>   
+	            <!-- Keep generated source files. -->   
+	            <arg value="-keep"/>     
+	            <!-- URL du wsdl -->
+	            <arg value="${wsdlurl}" />     
+	        </exec>   
+
+	</target>
+	
+</project>

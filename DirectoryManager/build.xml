@@ -1,0 +1,116 @@
+<project name="DirectoryManager" default="all" basedir=".">
+    <description>
+        A simple build script.
+    </description>
+    
+    <!-- To be modified according to the application -->
+    <property name="mbm" value="localhost"/>
+    <property name="wsdlurl" value="http://${mbm}:7364/MailBoxManager?wsdl"/>
+    <!-- Class which contains the main -->
+    <property name="mainclass" value=""/>
+    <property environment="env"/>
+    <property name="glassfish.home" value="${env.GLASSFISH_HOME}"/>
+    <property name="wsimport-cmd" value="wsimport"/> 
+
+    <property name="dm" value="directoryManager"/>
+    <property name="ent" value="entity"/>
+    <property name="ejb" value="ejb"/>
+    <property name="client.dir" value="../AdministrationClient"/>
+    
+    <path id="project.classpath">
+        <pathelement location="."/>
+        <pathelement location="class"/>
+        <fileset dir="${glassfish.home}/lib/" includes="**/*.jar"/>
+        <fileset dir="jars" includes="**/*.jar"/>
+    </path>
+
+    <target name="init">
+        <!-- Create the build directory structure -->
+        <mkdir dir="generated"/>
+        <mkdir dir="class"/>
+        <mkdir dir="class/META-INF"/>
+        <copydir  dest="class/META-INF" src="META-INF"/>
+        <mkdir dir="class/${dm}"/>
+        <mkdir dir="class/${dm}/${ent}"/>
+        <mkdir dir="class/${dm}/${ejb}"/>
+        <mkdir dir="class/${dm}/client"/>
+        <copy includeemptydirs="false" todir="class">
+            <fileset dir="generated">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+        <copy includeemptydirs="false" todir="class">
+            <fileset dir="src">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <!--<target name="all">
+        <antcall target="build"/>
+        <antcall target="deploy"/>
+    </target>-->
+    
+    <!--<target name="redeploy">
+        <antcall target="clean"/>
+        <antcall target="build"/>
+        <antcall target="deploy"/>
+    </target>-->
+    
+    <target name="wsimport" depends="init" >
+        <exec executable="${wsimport-cmd}">  
+            <!-- Specify where to write other generated files. -->   
+            <arg value="-d"/>   
+            <arg value="class"/>   
+            <!-- Specify where to write generated source files. -->   
+            <arg value="-s"/>   
+            <arg value="generated"/>   
+            <!-- Keep generated source files. -->   
+            <arg value="-keep"/>     
+            <!-- URL du wsdl -->
+            <arg value="${wsdlurl}" />     
+        </exec>   
+    </target>
+    
+    <target name="build" description="build" depends="wsimport">
+        <javac debug="false" destdir="class">
+            <src path="generated"/>
+            <classpath refid="project.classpath"/>
+        </javac>
+        <javac verbose="false" debug="true" destdir="class">
+            <src path="src"/>
+            <classpath refid="project.classpath"/>
+        </javac>
+        <antcall target="build-jar"/>
+    </target>
+    
+    <target name="build-jar" description="Build jar archive" >
+        <jar destfile="directoryManager.jar" 
+             basedir="class" 
+             includes="META-INF/persistence.xml,directoryManager/ejb/,directoryManager/entity/,directoryManager/client/,mailboxmanager/"/>
+    </target>
+
+    <target name="deploy" description="deploy" depends="build">
+        <exec executable="${glassfish.home}/bin/asadmin" 
+              failonerror="true" 
+              vmlauncher="false">
+            <arg line="deploy --force=true --retrieve . directoryManager.jar"/>
+        </exec>
+    </target>
+
+    <target name="undeploy" description="undeploy">
+        <exec executable="${glassfish.home}/bin/asadmin" 
+              failonerror="true" 
+              vmlauncher="false">
+            <arg line="undeploy directoryManager"/>
+        </exec>
+    </target>
+
+    <target name="clean" description="clean up" >
+        <delete file="directoryManager.jar"/>
+        <delete dir="class"/>
+        <delete dir="generated"/>
+        <antcall target="undeploy"/>
+    </target>
+
+</project>
